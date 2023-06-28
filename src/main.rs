@@ -142,7 +142,7 @@ fn main() -> anyhow::Result<()> {
 
             let name = &pkg.name;
 
-            if args.prod {
+            if args.prod || (!args.prod && !args.dev) {
                 for (pkg_name, version) in pkg.dependencies.0 {
                     add_to_dependency_map(&mut dependency_map, &pkg_name, &version, name, &args);
                 }
