@@ -2,13 +2,18 @@ use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::path::Path;
+use std::str::FromStr;
 
 use clap::Parser;
-use glob::glob;
+use colored_json::ToColoredJson;
+use glob::{glob, MatchOptions};
 use monocheck::models::file::*;
 use monocheck::models::package_json::PackageJson;
+use monocheck::models::semantic_version::*;
 use monocheck::models::workspace::Workspace;
+use monocheck::package_manager::{execute, PackageManager, PNPM};
 use monocheck::{log, Args};
+use prettytable::format::TableFormat;
 use prettytable::{row, Table};
 use serde::Serialize;
 
@@ -99,12 +104,27 @@ fn add_to_dependency_map(
         }
     }
 
-    let mut dependency = map
+    let dependency = map
         .entry(package_name.to_owned())
         .or_insert_with(Dependency::default);
 
     dependency.workspaces.insert(workspace.to_owned());
-    dependency.versions.insert(package_version.to_owned());
+
+    let version = match package_version.as_ref() {
+        "workspace:^" => "workspace".to_string(),
+        "workspace:*" => "workspace".to_string(),
+        v => v.replace("^", ""),
+    };
+
+    dependency.versions.insert(version);
+}
+
+#[derive(Debug, Serialize)]
+struct JSONData {
+    pub name: String,
+    pub count: usize,
+    pub workspaces: Vec<String>,
+    pub versions: Vec<String>,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -138,15 +158,8 @@ fn main() -> anyhow::Result<()> {
         }
     }
 
-    #[derive(Debug, Serialize)]
-    struct JSONData {
-        pub name: String,
-        pub count: usize,
-        pub workspaces: Vec<String>,
-        pub versions: Vec<String>,
-    }
-
-    if args.json {
+    // raw output
+    if args.json || args.yaml {
         // update result with array of packages taht have keys: name, workspaces and count
         let mut result: Vec<JSONData> = Vec::new();
 
@@ -158,30 +171,44 @@ fn main() -> anyhow::Result<()> {
                 continue;
             }
 
-            let workspaces = packages
+            let mut workspaces = packages
                 .clone()
                 .workspaces
                 .into_iter()
                 .collect::<Vec<String>>();
 
-            let versions = packages
+            workspaces.sort();
+
+            let mut versions = packages
                 .clone()
                 .versions
                 .into_iter()
-                .collect::<Vec<String>>();
+                .map(SemanticVersion::from)
+                .collect::<Vec<SemanticVersion>>();
+
+            versions.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
             result.push(JSONData {
                 name,
                 count,
                 workspaces,
-                versions,
+                versions: versions.iter().map(|v| v.to_string()).collect(),
             });
         }
 
-        println!("{}", serde_json::to_string_pretty(&result)?);
+        let string = if args.yaml {
+            serde_yaml::to_string(&result)?
+        } else if args.no_color {
+            serde_json::to_string_pretty(&result)?
+        } else {
+            serde_json::to_string_pretty(&result)?.to_colored_json_auto()?
+        };
+
+        println!("{}", string);
         return Ok(());
     }
 
+    // pretty print as table
     let mut table = Table::new();
 
     if args.deep {
@@ -190,27 +217,30 @@ fn main() -> anyhow::Result<()> {
         table.add_row(row!["Dependency", "Count", "Packages"]);
     }
 
-    for (name, packages) in dependency_map {
+    for (name, packages) in dependency_map.iter() {
         let count = packages.len();
 
         if count < args.min {
             continue;
         }
 
-        let workspaces = packages
+        let mut workspaces = packages
             .clone()
             .workspaces
             .into_iter()
             .collect::<Vec<String>>();
 
-        let versions = packages
+        workspaces.sort();
+
+        let versions_count = packages
             .clone()
             .versions
             .into_iter()
-            .collect::<Vec<String>>();
+            .collect::<Vec<String>>()
+            .len();
 
         if args.deep {
-            table.add_row(row![name, count, versions.len(), workspaces.join(", ")]);
+            table.add_row(row![name, count, versions_count, workspaces.join(", ")]);
         } else {
             table.add_row(row![name, count, workspaces.join(", ")]);
         }
@@ -218,6 +248,7 @@ fn main() -> anyhow::Result<()> {
 
     table.printstd();
 
+    // -1 because we have to remove header row
     let total = table.row_iter().len() - 1;
 
     if total == 0 {
@@ -225,7 +256,6 @@ fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    // -1 because we have to remove header row
-    println!("Total : {}", table.row_iter().len() - 1);
+    println!("Total : {}", total);
     Ok(())
 }

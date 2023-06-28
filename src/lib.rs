@@ -1,5 +1,6 @@
 pub mod log;
 pub mod models;
+pub mod package_manager;
 pub mod utils;
 
 use clap::Parser;
@@ -33,7 +34,14 @@ pub struct Args {
     #[clap(long, global = true)]
     pub deep: bool,
 
-    /// Output as JSON
+    /// Output as JSON (deep by default)
     #[clap(long, value_parser)]
     pub json: bool,
+
+    /// Output as YAML (deep by default)
+    #[clap(long, value_parser)]
+    pub yaml: bool,
+
+    #[clap(long, global = true, value_parser)]
+    pub no_color: bool,
 }
