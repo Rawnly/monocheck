@@ -45,9 +45,9 @@ pub struct Args {
     #[clap(long, global = true, value_parser)]
     pub no_color: bool,
     
-    #[clap(long, global = true, short = ‘D’, value_parser)]
+    #[clap(long, global = true, short = 'D', value_parser)]
     pub dev: bool,
     
-    #[clap(long, global = true, default_value_t = true, short = ‘P’, value_parser)]
+    #[clap(long, global = true, default_value_t = true, short = 'P', value_parser)]
     pub prod: bool
 }
