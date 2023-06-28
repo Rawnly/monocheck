@@ -142,12 +142,16 @@ fn main() -> anyhow::Result<()> {
 
             let name = &pkg.name;
 
-            for (pkg_name, version) in pkg.dependencies.0 {
-                add_to_dependency_map(&mut dependency_map, &pkg_name, &version, name, &args);
+            if args.prod {
+                for (pkg_name, version) in pkg.dependencies.0 {
+                    add_to_dependency_map(&mut dependency_map, &pkg_name, &version, name, &args);
+                }
             }
 
-            for (pkg_name, version) in pkg.dev_dependencies.0 {
-                add_to_dependency_map(&mut dependency_map, &pkg_name, &version, name, &args);
+            if args.dev {
+                for (pkg_name, version) in pkg.dev_dependencies.0 {
+                    add_to_dependency_map(&mut dependency_map, &pkg_name, &version, name, &args);
+                }
             }
         }
     }
