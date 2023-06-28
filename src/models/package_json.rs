@@ -4,13 +4,10 @@ use crate::models::file::File;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
+#[derive(Default)]
 pub struct Dependencies(pub HashMap<String, String>);
 
-impl Default for Dependencies {
-    fn default() -> Self {
-        Self(HashMap::new())
-    }
-}
+
 
 impl Dependencies {
     pub fn len(&self) -> usize {

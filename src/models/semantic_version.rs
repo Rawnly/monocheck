@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+#[derive(Default)]
 pub struct SemanticVersion {
     workspace: bool,
 
@@ -11,17 +12,6 @@ pub struct SemanticVersion {
 impl From<String> for SemanticVersion {
     fn from(value: String) -> Self {
         Self::from_str(&value).expect("cannot perform conversion from string to semantic-version")
-    }
-}
-
-impl Default for SemanticVersion {
-    fn default() -> Self {
-        Self {
-            workspace: false,
-            major: 0,
-            minor: 0,
-            patch: 0,
-        }
     }
 }
 
@@ -56,17 +46,16 @@ impl FromStr for SemanticVersion {
         match s {
             "workspace" => {
                 v.workspace = true;
-                return Ok(v);
+                Ok(v)
             }
             s => {
-                if s.starts_with("^") {
-                    // remove first char
-                    return Self::from_str(&s[1..]);
+                if let Some(stripped) = s.strip_prefix('^') {
+                    return Self::from_str(stripped);
                 }
 
-                let parts: Vec<&str> = s.split(".").collect();
+                let parts: Vec<&str> = s.split('.').collect();
 
-                if parts.len() > 0 {
+                if !parts.is_empty() {
                     v.major = parts[0].parse().unwrap_or_default();
                 }
 

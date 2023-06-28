@@ -2,22 +2,21 @@ use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::path::Path;
-use std::str::FromStr;
 
 use clap::Parser;
 use colored_json::ToColoredJson;
-use glob::{glob, MatchOptions};
+use glob::glob;
 use monocheck::models::file::*;
 use monocheck::models::package_json::PackageJson;
 use monocheck::models::semantic_version::*;
 use monocheck::models::workspace::Workspace;
-use monocheck::package_manager::{execute, PackageManager, PNPM};
+
 use monocheck::{log, Args};
-use prettytable::format::TableFormat;
+
 use prettytable::{row, Table};
 use serde::Serialize;
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Clone, Default)]
 pub struct Dependency {
     pub versions: HashSet<String>,
     pub workspaces: HashSet<String>,
@@ -27,14 +26,9 @@ impl Dependency {
     pub fn len(&self) -> usize {
         self.workspaces.len()
     }
-}
 
-impl Default for Dependency {
-    fn default() -> Self {
-        Self {
-            versions: HashSet::new(),
-            workspaces: HashSet::new(),
-        }
+    pub fn is_empty(&self) -> bool {
+        self.workspaces.is_empty()
     }
 }
 
@@ -92,7 +86,7 @@ fn add_to_dependency_map(
 
     // search for workspace name matches
     if let Some(matches) = args.match_workspace.clone() {
-        if !matches.is_match(&workspace) {
+        if !matches.is_match(workspace) {
             return;
         }
     }
@@ -113,7 +107,7 @@ fn add_to_dependency_map(
     let version = match package_version.as_ref() {
         "workspace:^" => "workspace".to_string(),
         "workspace:*" => "workspace".to_string(),
-        v => v.replace("^", ""),
+        v => v.replace('^', ""),
     };
 
     dependency.versions.insert(version);
@@ -149,11 +143,11 @@ fn main() -> anyhow::Result<()> {
             let name = &pkg.name;
 
             for (pkg_name, version) in pkg.dependencies.0 {
-                add_to_dependency_map(&mut dependency_map, &pkg_name, &version, &name, &args);
+                add_to_dependency_map(&mut dependency_map, &pkg_name, &version, name, &args);
             }
 
             for (pkg_name, version) in pkg.dev_dependencies.0 {
-                add_to_dependency_map(&mut dependency_map, &pkg_name, &version, &name, &args);
+                add_to_dependency_map(&mut dependency_map, &pkg_name, &version, name, &args);
             }
         }
     }

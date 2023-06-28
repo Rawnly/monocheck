@@ -26,11 +26,11 @@ impl PackageManager for PNPM {
         execute("pnpm", ["install"])
     }
 
-    fn remove(pkg: &str) -> io::Result<Output> {
+    fn remove(_pkg: &str) -> io::Result<Output> {
         execute("pnpm", ["remove"])
     }
 
-    fn add(pkg: &str) -> io::Result<Output> {
+    fn add(_pkg: &str) -> io::Result<Output> {
         execute("pnpm", ["add"])
     }
 }
@@ -42,11 +42,11 @@ impl PackageManager for NPM {
         execute("npm", ["install"])
     }
 
-    fn remove(pkg: &str) -> io::Result<Output> {
+    fn remove(_pkg: &str) -> io::Result<Output> {
         execute("npm", ["remove"])
     }
 
-    fn add(pkg: &str) -> io::Result<Output> {
+    fn add(_pkg: &str) -> io::Result<Output> {
         execute("npm", ["add"])
     }
 }
@@ -58,11 +58,11 @@ impl PackageManager for Yarn {
         execute("yaarn", ["install"])
     }
 
-    fn remove(pkg: &str) -> io::Result<Output> {
+    fn remove(_pkg: &str) -> io::Result<Output> {
         execute("yaarn", ["remove"])
     }
 
-    fn add(pkg: &str) -> io::Result<Output> {
+    fn add(_pkg: &str) -> io::Result<Output> {
         execute("yaarn", ["add"])
     }
 }
