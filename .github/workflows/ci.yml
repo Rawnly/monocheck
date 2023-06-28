@@ -24,8 +24,6 @@ jobs:
         uses: swatinem/rust-cache@v2
       - name: Run Check
         run: |
-          set -e 
-
           cargo check
           cargo clippy
           cargo fmt
