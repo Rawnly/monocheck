@@ -207,14 +207,54 @@ fn search_deps(
     }
 }
 
-fn main() -> anyhow::Result<()> {
-    let args = Args::parse();
+#[derive(Debug, Default, Copy, Clone)]
+enum MonorepoKind {
+    #[default]
+    Generic,
+    Pnpm,
+}
+
+fn get_monorepo_kind() -> Option<MonorepoKind> {
     let workspace_file = Path::new("pnpm-workspace.yaml");
+    let pkg_file = Path::new("package.json");
 
     if !workspace_file.exists() {
-        log::error("Workspace file not found", workspace_file);
-        return Ok(());
+        if pkg_file.exists() {
+            return Some(MonorepoKind::Generic);
+        }
+
+        log::error("Workspace file not found", pkg_file);
+        return None;
     }
+
+    Some(MonorepoKind::Pnpm)
+}
+
+fn get_packages(kind: MonorepoKind) -> Vec<String> {
+    match kind {
+        MonorepoKind::Generic => {
+            let pkg = Path::new("package.json");
+            let PackageJson { workspaces, .. } = PackageJson::load(pkg).unwrap();
+
+            workspaces.unwrap_or_default()
+        }
+        MonorepoKind::Pnpm => {
+            let workspace_file = Path::new("pnpm-workspace.yaml");
+            let Workspace { packages } = Workspace::load(workspace_file).unwrap();
+
+            packages
+        }
+    }
+}
+
+fn main() -> anyhow::Result<()> {
+    let args = Args::parse();
+    let kind = match get_monorepo_kind() {
+        Some(k) => k,
+        None => panic!("Workspace file not found"),
+    };
+
+    log::error("Workspace file found", kind);
 
     match args.action.clone() {
         Some(action) => match action {
@@ -223,7 +263,7 @@ fn main() -> anyhow::Result<()> {
                 // HashMap<package_name, HashSet<workspace_name>>
                 let mut dependencies: HashMap<String, HashSet<String>> = HashMap::new();
 
-                let Workspace { packages } = Workspace::load(workspace_file)?;
+                let packages = get_packages(kind);
                 let root_manifest = PackageJson::load(Path::new("package.json"))?;
 
                 if args.include_root {
@@ -258,7 +298,7 @@ fn main() -> anyhow::Result<()> {
             }
         },
         None => {
-            let Workspace { packages } = Workspace::load(workspace_file)?;
+            let packages = get_packages(kind);
             let mut dependency_map: DependencyMap = DependencyMap::new();
 
             for g in packages {
